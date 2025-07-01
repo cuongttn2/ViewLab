@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.dokka)
 }
 
 android {
@@ -39,7 +40,7 @@ android {
 }
 
 dependencies {
-
+    dokkaPlugin(libs.android.documentation.plugin)
     implementation(libs.kavehcolorpicker)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
