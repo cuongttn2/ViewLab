@@ -4,10 +4,13 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.Bundle
+import android.os.Parcelable
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import com.example.viewlab.R
+import kotlin.math.floor
 import kotlin.math.max
 
 abstract class ColorSlider(context: Context, attributeSet: AttributeSet?) :
@@ -152,13 +155,39 @@ abstract class ColorSlider(context: Context, attributeSet: AttributeSet?) :
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        return super.onTouchEvent(event)
+        event?.let { e ->
+            return when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    changePositionOfCircle(e.x, e.y)
+                    true
+                }
 
+                MotionEvent.ACTION_MOVE -> {
+                    changePositionOfCircle(e.x, e.y)
+                    true
+                }
+
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    changePositionOfCircle(e.x, e.y)
+                    onDragEnded(e.x, e.y)
+                    false
+                }
+
+                else -> {
+                    false
+                }
+            }
+        }
+        return super.onTouchEvent(null)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
+        if (w != oldw || h != oldh) {
 
+            calculateBounds(w.toFloat(), h.toFloat())
+
+            initializeSliderPaint()
+        }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -198,8 +227,51 @@ abstract class ColorSlider(context: Context, attributeSet: AttributeSet?) :
 
 
     override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
+        canvas.drawLine(
+            drawingStart,
+            drawingTop,
+            widthF,
+            drawingTop,
+            linePaint
+        )
 
+        canvas.drawCircle(
+            circleX,
+            drawingTop,
+            heightHalf,
+            circlePaint.apply {
+                color = strokeColor
+            })
+
+        canvas.drawCircle(
+            circleX,
+            drawingTop,
+            heightHalf - strokeSize,
+            circlePaint.apply {
+                color = circleColor
+            })
+    }
+
+    override fun onSaveInstanceState(): Parcelable? {
+        return Bundle().apply {
+            // Save current position of circle as factors to later restore it's state.
+            putFloat(CIRCLE_X_KEY, (circleX - drawingStart) / (widthF - drawingStart))
+            putFloat(CIRCLE_Y_KEY, (circleY - drawingTop) / (heightF - drawingTop))
+            putParcelable(STATE_KEY, super.onSaveInstanceState())
+        }
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        (state as? Bundle)?.apply {
+            circleXFactor = getFloat(CIRCLE_X_KEY)
+            circleYFactor = getFloat(CIRCLE_Y_KEY)
+            isFirstTimeLaying = false
+            isRestoredState = true
+            super.onRestoreInstanceState(getParcelable(STATE_KEY))
+            return
+        }
+
+        super.onRestoreInstanceState(state)
     }
 
     /**
@@ -265,12 +337,39 @@ abstract class ColorSlider(context: Context, attributeSet: AttributeSet?) :
 
     }
 
+    protected open fun changePositionOfCircle(ex: Float, ey: Float) {
+        circleX = floor(ex).coerceIn(drawingStart, widthF)
+        circleY = floor(ey).coerceIn(drawingTop, heightF)
+
+        onCirclePositionChanged(circleX, circleY)
+    }
+
+
+    /**
+     * Called when position of indicator changes in slider or picker.
+     * @param circlePositionX Position of indicator in x axis.
+     * @param circlePositionY Position of indicator in y axis.
+     */
+    protected open fun onCirclePositionChanged(circlePositionX: Float, circlePositionY: Float) {
+
+    }
+
+    /**
+     * Called when motion event ends
+     * @param lastX Last position of touch in x axis
+     * @param lastY Last position of touch in y axis
+     */
+    protected open fun onDragEnded(lastX: Float, lastY: Float) {
+
+    }
+
     companion object {
         /**
          * The key name stores the X/Y indicator position ratio.
          * */
         private const val CIRCLE_X_KEY = "circleX"
         private const val CIRCLE_Y_KEY = "circleY"
+
         /**
          * Key contains Parcelable root state of parent View (super.onSaveInstanceState()).
          * */
