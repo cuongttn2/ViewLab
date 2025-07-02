@@ -13,7 +13,7 @@ import com.example.viewlab.R
 import kotlin.math.floor
 import kotlin.math.max
 
-abstract class ColorSlider(context: Context, attributeSet: AttributeSet?) :
+abstract class BaseSlider(context: Context, attributeSet: AttributeSet?) :
     View(context, attributeSet) {
 
     constructor(context: Context) : this(context, null)
